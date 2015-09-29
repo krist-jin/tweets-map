@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Heatmaps</title>
+    <style>
+      html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+      #panel {
+        position: absolute;
+        top: 5px;
+        left: 50%;
+        margin-left: -180px;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+      }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true&libraries=visualization"></script>
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
+
+    <script>
+      var map, heatmap;
+      var markerFlag = null;
+      var markers = [];
+      var socket;
+
+      function initialize() {
+        var mapOptions = {
+          zoom: 3,
+          center: new google.maps.LatLng(37.774546, -122.433523),
+          mapTypeId: google.maps.MapTypeId.MAP
+        };
+
+        map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+        // fetch data and create inital heat map
+        var tweetPoints = new google.maps.MVCArray();
+        // heatmap = new google.maps.visualization.HeatmapLayer({
+        //     map: map,
+        //     data: tweetPoints,
+        //     radius: 40
+        //   });
+        $.getJSON("/api/history/keyword/", function(data){
+          $.each(data,function(i,tweet) {
+              tweetPoints.push(new google.maps.LatLng(tweet.lat, tweet.lon));
+          });
+          heatmap = new google.maps.visualization.HeatmapLayer({
+            map: map,
+            data: tweetPoints,
+            radius: 40
+          });
+        });
+      }
+
+      function submitUserChoice()
+      {
+        var mode = $("#mode option:selected").val();
+        var keyword = $("#keyword").val()
+        if (mode=="history")
+          handleHistory(keyword);
+        else if (mode=="realtime")
+          handleRealtime(keyword);
+        else
+          alert("Illegal choice!");
+      }
+
+      function handleHistory(keyword)
+      {
+        var newTweetPoints = new google.maps.MVCArray();
+        $.getJSON("/api/history/keyword/"+keyword, function(data){
+          $.each(data,function(i,tweet) {
+            newTweetPoints.push(new google.maps.LatLng(tweet.lat, tweet.lon));
+          });
+          heatmap.setData(newTweetPoints);
+        });
+      }
+
+      function handleRealtime(keyword)
+      {
+        if (typeof socket != 'undefined')
+          socket.disconnect();
+        hideMarkers();
+        markers = [];
+        var newTweetPoints = new google.maps.MVCArray();
+        heatmap.setData(newTweetPoints);
+        var addr = 'http://' + document.domain + ':' + location.port;
+        // alert(addr);
+        socket = io.connect(addr, {'force new connection':true });
+        socket.emit('keyword', keyword);
+        socket.on('data_transfer', function(data) {
+          // alert(data);
+          // console.log(data);
+          parsedData = $.parseJSON(data);
+          newLatLon = new google.maps.LatLng(parsedData.lat, parsedData.lon);
+          newTweetPoints.push(newLatLon);
+          var marker = new google.maps.Marker({
+            position: newLatLon,
+            map: markerFlag
+          });
+          markers.push(marker);
+          var iw = new google.maps.InfoWindow({content: parsedData.text});
+          google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+        });
+        socket.on('die', function(exception) {
+          alert(exception);
+          socket.disconnect();
+        });
+      }
+
+      $(function() {  // toggle markers
+        $('#toggleMarkers').click(function() {
+          $(this).val() == "Show markers" ? showMarkers() : hideMarkers();
+        });
+      });
+
+      $(function() {  // toggle heatmap
+        $('#toggleHeatmap').click(function() {
+          $(this).val() == "Show heatmap" ? showHeatmap() : hideHeatmap();
+        });
+      });
+
+      function setAllMap(map) {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(map);
+        }
+      }
+
+      function hideMarkers()
+      {
+        $('#toggleMarkers').val("Show markers");
+        setAllMap(null);
+        markerFlag = null;
+      }
+
+      function showMarkers() {
+        $('#toggleMarkers').val("Hide markers");
+        setAllMap(map);
+        markerFlag = map;
+      }
+
+      function hideHeatmap() {
+        $('#toggleHeatmap').val("Show heatmap");
+        heatmap.setMap(null);
+      }
+
+      function showHeatmap() {
+        $('#toggleHeatmap').val("Hide heatmap");
+        heatmap.setMap(map);
+      }
+
+      google.maps.event.addDomListener(window, 'load', initialize);
+
+    </script>
+  </head>
+
+  <body>
+    <div id="panel">
+      <select id="mode">
+        <option value="history">Show history data</option>
+        <option value="realtime">Show real time data</option>
+      </select>
+      Keyword: <input id="keyword" type="text" value="">
+      <button type="submit" onclick="submitUserChoice()">Show tweets</button>
+      <input type="button" id="toggleMarkers" value="Show markers"/>
+      <input type="button" id="toggleHeatmap" value="Hide heatmap"/>
+    </div>
+    <div id="map-canvas"></div>
+  </body>
+</html>
