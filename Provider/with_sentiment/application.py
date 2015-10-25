@@ -6,9 +6,11 @@ import json
 import redis
 from ast import literal_eval
 
+from mysql_credentials import connection_string
+
 
 application = Flask(__name__)
-application.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://krist:jinbo0321@kristdb.cpoee5a9mjb2.us-east-1.rds.amazonaws.com:3306/kristdb'
+application.config['SQLALCHEMY_DATABASE_URI'] = connection_string
 application.debug = True
 db = SQLAlchemy(application)
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
