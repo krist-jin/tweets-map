@@ -68,6 +68,8 @@ def main():
 
         ### process data here ###
         text = data_depickled['text']
+        # word_count = len(text.split())
+        # data_depickled['word_count'] = word_count
         data_pickled = pickle.dumps(data_depickled)
         redis.publish('tweets_processed', data_pickled)
 

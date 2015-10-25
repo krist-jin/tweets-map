@@ -4,6 +4,7 @@
 from flask import Flask, render_template, Response
 from flask.ext.socketio import SocketIO, emit
 
+import os
 import sys
 import json
 import redis
@@ -15,10 +16,12 @@ from pymongo import MongoClient
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
-application = Flask(__name__)
+STATIC_FOLDER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), './static')
+application = Flask(__name__, static_folder=STATIC_FOLDER_DIR)
 application.debug = True
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 socketio = SocketIO(application)
+
 
 # mongoDB
 mongo_client = MongoClient(mongo_credentials.connection_string)
@@ -114,7 +117,8 @@ def data_filter(tweet):
     data = {
         "text": tweet.get('text'),
         "lon": lon,
-        "lat": lat
+        "lat": lat,
+        # "word_count": tweet.get("word_count")
     }
     # print data
     return data

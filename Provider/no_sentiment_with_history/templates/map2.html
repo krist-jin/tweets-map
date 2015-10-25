@@ -19,22 +19,34 @@
         padding: 5px;
         border: 1px solid #999;
       }
-      #word_count_chart {
+      #word-count-chart {
           position: fixed;
           z-index: 2;
-          top: 7px;
+          bottom: 0;
           width: 100%;
-          height: 120px;
+      }
+      svg {
+        font: 10px sans-serif;
+        width: 100%;
+      }
+      .line {
+        fill: none;
+        stroke: #000;
+        stroke-width: 1.5px;
+      }
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
       }
     </style>
-    <script src="//code.jquery.com/jquery-latest.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true&libraries=visualization"></script>
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
     <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
     <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-    <script type="text/javascript" src="../static/js/epoch.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="../static/css/epoch.min.css">
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true&libraries=visualization"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 
     <script>
       var map, heatmap;
@@ -183,61 +195,56 @@
       <input type="button" id="toggleMarkers" value="Show markers"/>
       <input type="button" id="toggleHeatmap" value="Hide heatmap"/>
     </div>
-    <div id="word_count_chart" class="epoch"></div>
+    <div id="word-count-chart"></div>
     <div id="map-canvas"></div>
     <script type="text/javascript">
-    var RealTimeData = function(layers) {
-        this.layers = layers;
-        this.timestamp = ((new Date()).getTime() / 1000)|0;
-    };
-
-    RealTimeData.prototype.rand = function() {
-        return parseInt(Math.random() * 100) + 50;
-    };
-
-    RealTimeData.prototype.history = function(entries) {
-        if (typeof(entries) != 'number' || !entries) {
-            entries = 1;
-        }
-
-        var history = [];
-        for (var k = 0; k < this.layers; k++) {
-            history.push({ values: [] });
-        }
-
-        for (var j = 0; j < this.layers; j++) {
-            history[j].values.push({time: this.timestamp, y: 0});
-        }
-        this.timestamp++;
-
-        return history;
-    };
-
-    RealTimeData.prototype.next = function() {
-        var entry = [];
-        for (var i = 0; i < this.layers; i++) {
-            entry.push({ time: this.timestamp, y: this.rand() });
-        }
-        this.timestamp++;
-        return entry;
-    }
-
-    window.RealTimeData = RealTimeData;
-
-    $(function(){
-
-        var data = new RealTimeData(1);
-
-        var chart = $('#word_count_chart')
-           .epoch({
-                type: 'time.bar',
-                data: data.history(0),
-                axes: ['left', 'bottom', 'right']
-            });
-            // pull data not push data model?
-            window.setInterval(function() { var x= data.next(); chart.push(x); }, 1000);
-    });
-
-</script>
+      var n = 60,
+      random = d3.random.normal(0, .2),
+      data = d3.range(n);
+      var margin = {top: 0, right: 0, bottom: 0, left: 0},
+          width = window.innerWidth,
+          height = 100 - margin.top - margin.bottom;
+      var x = d3.scale.linear()
+          .domain([1, n - 2])
+          .range([0, width]);
+      var y = d3.scale.linear()
+          .domain([-1, 1])
+          .range([height, 0]);
+      var line = d3.svg.line()
+          .interpolate("basis")
+          .x(function(d, i) { return x(i); })
+          .y(function(d, i) { return y(d); });
+      var svg = d3.select("#word-count-chart").append("svg")
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      svg.append("defs").append("clipPath")
+          .attr("id", "clip")
+          .append("rect")
+          .attr("width", "100%")
+          .attr("height", height);
+      var path = svg.append("g")
+          .attr("clip-path", "url(#clip)")
+          .append("path")
+          .datum(data)
+          .attr("class", "line")
+          .attr("d", line);
+      function tick() {
+        // push a new data point onto the back
+        data.push(random());
+        // redraw the line, and slide it to the left
+        path
+            .attr("d", line)
+            .attr("transform", null)
+          .transition()
+            .duration(1000)
+            .ease("linear")
+            .attr("transform", "translate(" + x(0) + ",0)")
+            .each("end", tick);
+        // pop the old data point off the front
+        data.shift();
+      }
+      tick();
+    </script>
   </body>
 </html>
