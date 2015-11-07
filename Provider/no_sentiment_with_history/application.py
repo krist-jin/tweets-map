@@ -33,28 +33,6 @@ filtered_tweets_collection = tweets_db.filtered_tweets_collection
 def index():
     return render_template('map.html')
 
-@application.route('/test', methods=['GET'])
-def test():
-    pubsub = redis.pubsub()
-    pubsub.subscribe('tweets_processed')
-    tweets = pubsub.listen()
-    num=0
-    while True:
-        print "test:",num
-        num+=1
-        message = tweets.next()
-        processed_tweet = message.get('data')
-        if not processed_tweet:
-            continue
-        try:
-            processed_tweet_dict = pickle.loads(processed_tweet)
-        except TypeError, e:
-            continue
-        if not isinstance(processed_tweet_dict, dict):
-            continue
-        # print processed_tweet_dict['id']
-        data_filter(processed_tweet_dict)
-
 @application.route('/api/history/keyword/', methods=['GET'])
 @application.route('/api/history/keyword/<keyword>', methods=['GET'])
 def handle_history(keyword=""):
@@ -84,14 +62,10 @@ def handle_realtime_connect(keyword):
             if not processed_tweet:
                 continue
             try:
-                processed_tweet_dict = pickle.loads(processed_tweet)
+                data = pickle.loads(processed_tweet)
             except TypeError, e:
                 continue
-            if not isinstance(processed_tweet_dict, dict):
-                continue
-            try:
-                data = data_filter(processed_tweet_dict)
-            except Exception, e:
+            if not isinstance(data, dict):
                 continue
 
             if data["text"] and data["lon"] and data["lat"]:

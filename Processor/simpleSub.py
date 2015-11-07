@@ -14,6 +14,23 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 
+def data_filter(tweet):
+    raw_coordinates = tweet.get('place').get('coordinates')
+    if len(raw_coordinates)==1:
+        coordinates = raw_coordinates[0]
+        lon,lat = coordinates[0],coordinates[1]
+    elif len(raw_coordinates)==4:
+        left_down,up_right = raw_coordinates[0],raw_coordinates[2]
+        lon,lat = (left_down[0]+up_right[0])/2.0,(left_down[1]+up_right[1])/2.0
+    else:
+        raise Exception("Coordinates format error")
+    data = {
+        "text": tweet.get('text'),
+        "lon": lon,
+        "lat": lat,
+    }
+    return data
+
 def main():
     client = KafkaClient("localhost:9092")
     consumer = SimpleConsumer(client, "test-group", "twitter_raw")
@@ -67,10 +84,9 @@ def main():
         # }
 
         ### process data here ###
-        text = data_depickled['text']
-        # word_count = len(text.split())
-        # data_depickled['word_count'] = word_count
-        data_pickled = pickle.dumps(data_depickled)
+        # text = data_depickled['text']
+        filtered_data = data_filter(data_depickled)
+        data_pickled = pickle.dumps(filtered_data)
         redis.publish('tweets_processed', data_pickled)
 
 if __name__ == "__main__":
