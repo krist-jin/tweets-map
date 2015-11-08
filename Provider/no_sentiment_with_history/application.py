@@ -78,6 +78,19 @@ def handle_realtime_connect(keyword):
             print e
             return
 
+### api used to get wordcount from spark streaming ###
+@application.route('/wordcount', methods=['GET']) # TODO: change to socket.io and bind d3
+def getWordCount():
+    pubsub = redis.pubsub()
+    pubsub.subscribe('word_count')
+    counts = pubsub.listen()
+    while True:
+        try:
+            count = counts.next()
+            print count
+        except Exception, e:
+            raise e
+
 def data_filter(tweet):
     raw_coordinates = tweet.get('place').get('coordinates')
     if len(raw_coordinates)==1:
@@ -92,7 +105,6 @@ def data_filter(tweet):
         "text": tweet.get('text'),
         "lon": lon,
         "lat": lat,
-        # "word_count": tweet.get("word_count")
     }
     # print data
     return data
