@@ -6,7 +6,8 @@
     <!-- Include the Sidr JS -->
     <script src="js/jquery.sidr.min.js"></script>
     <!-- Include Sidr bundled CSS theme -->
-    <link rel="stylesheet" href="css/jquery.sidr.dark.css">
+    <link rel="stylesheet" href="css/jquery.sidr.light.css">
+    <!-- <link rel="stylesheet" href="css/jquery.sidr.dark.css"> -->
   </head>
   <body>
     <!-- Your stuff -->
@@ -23,7 +24,10 @@
 
     <script>
     $(document).ready(function() {
-      $('#simple-menu').sidr();
+      $('#simple-menu').sidr({
+          side: 'right',
+          displace: false
+        });
     });
     </script>
 
