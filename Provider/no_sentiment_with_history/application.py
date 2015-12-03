@@ -43,7 +43,7 @@ def handle_history(keyword=""):
         tweets = filtered_tweets_collection.find({'text': {'$regex' : '.*'+keyword+'.*'}})
     for t in tweets:
         data = data_filter(t)
-        tmpDict = {"lon":data["lon"], "lat":data["lat"]}
+        tmpDict = {"lon":data["lon"], "lat":data["lat"], "text":data["text"]}
         twData.append(tmpDict)
     return json.dumps(twData)
 

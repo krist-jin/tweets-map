@@ -40,7 +40,10 @@
       var map, heatmap;
       var markerFlag = null;
       var markers = [];
-      var socket1;
+      var socket1 = null;
+      var currentKeyword = null;
+      var tweetPoints = null;
+      var SOCKET_ADDR = 'http://' + document.domain + ':' + location.port;
 
       function initialize() {
         var mapOptions = {
@@ -50,9 +53,9 @@
         };
 
         map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
+        markers = [];
         // fetch data and create inital heat map
-        var tweetPoints = new google.maps.MVCArray();
+        tweetPoints = new google.maps.MVCArray();
         // heatmap = new google.maps.visualization.HeatmapLayer({
         //     map: map,
         //     data: tweetPoints,
@@ -60,7 +63,15 @@
         //   });
         $.getJSON("/api/history/keyword/", function(data){
           $.each(data,function(i,tweet) {
-              tweetPoints.push(new google.maps.LatLng(tweet.lat, tweet.lon));
+            newLatLon = new google.maps.LatLng(tweet.lat, tweet.lon);
+            tweetPoints.push(newLatLon);
+            var marker = new google.maps.Marker({
+              position: newLatLon,
+              map: markerFlag
+            });
+            markers.push(marker);
+            var iw = new google.maps.InfoWindow({content: tweet.text});
+            google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
           });
           heatmap = new google.maps.visualization.HeatmapLayer({
             map: map,
@@ -74,6 +85,13 @@
       {
         var mode = $("#mode option:selected").val();
         var keyword = $("#keyword").val()
+        markers = [];
+        hideMarkers();
+        if (socket1 != null)
+        {
+          socket1.disconnect();
+          socket1 = null;
+        }
         if (mode=="history")
           handleHistory(keyword);
         else if (mode=="realtime")
@@ -84,33 +102,38 @@
 
       function handleHistory(keyword)
       {
-        var newTweetPoints = new google.maps.MVCArray();
+        tweetPoints = new google.maps.MVCArray();
         $.getJSON("/api/history/keyword/"+keyword, function(data){
           $.each(data,function(i,tweet) {
-            newTweetPoints.push(new google.maps.LatLng(tweet.lat, tweet.lon));
+            newLatLon = new google.maps.LatLng(tweet.lat, tweet.lon);
+            tweetPoints.push(newLatLon);
+            var marker = new google.maps.Marker({
+              position: newLatLon,
+              map: markerFlag
+            });
+            markers.push(marker);
+            var iw = new google.maps.InfoWindow({content: tweet.text});
+            google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
           });
-          heatmap.setData(newTweetPoints);
+          heatmap.setData(tweetPoints);
         });
       }
 
       function handleRealtime(keyword)
       {
-        if (typeof socket1 != 'undefined')
-          socket1.disconnect();
-        hideMarkers();
-        markers = [];
-        var newTweetPoints = new google.maps.MVCArray();
-        heatmap.setData(newTweetPoints);
-        var addr = 'http://' + document.domain + ':' + location.port;
-        // alert(addr);
-        socket1 = io.connect(addr, {'force new connection':true });
-        socket1.emit('keyword', keyword);
+        $('#heatmap_pause_resume').val("Pause");
+        tweetPoints = new google.maps.MVCArray();
+        heatmap.setData(tweetPoints);
+        // alert(SOCKET_ADDR);
+        socket1 = io.connect(SOCKET_ADDR, {'force new connection':true });
+        currentKeyword = keyword;
+        socket1.emit('keyword', currentKeyword);
         socket1.on('data_transfer', function(data) {
           // alert(data);
           // console.log(data);
           parsedData = $.parseJSON(data);
           newLatLon = new google.maps.LatLng(parsedData.lat, parsedData.lon);
-          newTweetPoints.push(newLatLon);
+          tweetPoints.push(newLatLon);
           var marker = new google.maps.Marker({
             position: newLatLon,
             map: markerFlag
@@ -122,6 +145,8 @@
         socket1.on('die1', function(exception) {
           alert(exception);
           socket1.disconnect();
+          socket1 = null;
+          currentKeyword = null;
         });
       }
 
@@ -134,6 +159,12 @@
       $(function() {  // toggle heatmap
         $('#toggleHeatmap').click(function() {
           $(this).val() == "Show heatmap" ? showHeatmap() : hideHeatmap();
+        });
+      });
+
+      $(function() {  // toggle pause/resume
+        $('#heatmap_pause_resume').click(function() {
+          $(this).val() == "Resume" ? resumeHeatmap() : pauseHeatmap();
         });
       });
 
@@ -166,6 +197,38 @@
         heatmap.setMap(map);
       }
 
+      function pauseHeatmap() {
+        if (socket1 != null)
+        {
+          $('#heatmap_pause_resume').val("Resume");
+          socket1.disconnect();
+          socket1 = null;
+        }
+      }
+
+      function resumeHeatmap() {
+        if(socket1 == null && currentKeyword != null)
+        {
+          $('#heatmap_pause_resume').val("Pause");
+          socket1 = io.connect(SOCKET_ADDR, {'force new connection':true });
+          socket1.emit('keyword', currentKeyword);
+          socket1.on('data_transfer', function(data) {
+            // alert(data);
+            // console.log(data);
+            parsedData = $.parseJSON(data);
+            newLatLon = new google.maps.LatLng(parsedData.lat, parsedData.lon);
+            tweetPoints.push(newLatLon);
+            var marker = new google.maps.Marker({
+              position: newLatLon,
+              map: markerFlag
+            });
+            markers.push(marker);
+            var iw = new google.maps.InfoWindow({content: parsedData.text});
+            google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+          });
+        }
+      }
+
       google.maps.event.addDomListener(window, 'load', initialize);
       
 
@@ -180,23 +243,26 @@
       </select>
       Keyword: <input id="keyword" type="text" value="">
       <button type="submit" onclick="submitUserChoice()">Show tweets</button>
+      <input type="button" id="heatmap_pause_resume" value="Pause"/>
       <input type="button" id="toggleMarkers" value="Show markers"/>
       <input type="button" id="toggleHeatmap" value="Hide heatmap"/>
     </div>
     <div id="word_count_chart" class="epoch"></div>
     <div id="map-canvas"></div>
     <script type="text/javascript">
-      var socket2;
+      var socket2 = null;
       var chart;
       var timestamp = ((new Date()).getTime() / 1000)|0;
 
       function getWordCount()
       {
-        if (typeof socket2 != 'undefined')
+        if (socket2 != null)
+        {
           socket2.disconnect();
-        var addr = 'http://' + document.domain + ':' + location.port;
-        // alert(addr);
-        socket2 = io.connect(addr, {'force new connection':true });
+          socket2 = null;
+        }
+        // alert(SOCKET_ADDR);
+        socket2 = io.connect(SOCKET_ADDR, {'force new connection':true });
         socket2.emit('wordcount_c2s', '');
         socket2.on('wordcount_s2c', function(count) {
           count = parseInt(count);
@@ -211,6 +277,7 @@
         socket2.on('die2', function(exception) {
           alert(exception);
           socket2.disconnect();
+          socket2 = null;
         });
       }
 
