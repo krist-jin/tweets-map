@@ -73,23 +73,28 @@ def handle_realtime_connect(keyword):
                     emit('data_transfer', json.dumps(data))
 
         except Exception, e:
-            emit('die', e, broadcast=True)
+            emit('die1', e, broadcast=True)
             pubsub.unsubscribe('tweets_processed')
             print e
             return
 
 ### api used to get wordcount from spark streaming ###
-@application.route('/wordcount', methods=['GET']) # TODO: change to socket.io and bind d3
-def getWordCount():
+# @application.route('/wordcount', methods=['GET']) # TODO: change to socket.io and bind d3
+@socketio.on('wordcount_c2s')
+def getWordCount(msg):
     pubsub = redis.pubsub()
     pubsub.subscribe('word_count')
-    counts = pubsub.listen()
+    message = pubsub.listen()
     while True:
         try:
-            count = counts.next()
-            print count
+            count = message.next().get('data')
+            emit('wordcount_s2c', count)
+            # print count
         except Exception, e:
-            raise e
+            emit('die2', e, broadcast=True)
+            pubsub.unsubscribe('word_count')
+            print e
+            return
 
 def data_filter(tweet):
     raw_coordinates = tweet.get('place').get('coordinates')

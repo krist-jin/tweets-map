@@ -20,7 +20,9 @@ sys.setdefaultencoding('utf8')
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 def publishToRedis(count):
-    redis.publish("word_count", count.collect())
+    result = count.collect()
+    if result:
+        redis.publish("word_count", result[0])
 
 def main():
     sc = SparkContext(appName="PythonStreamingKafkaWordCount")

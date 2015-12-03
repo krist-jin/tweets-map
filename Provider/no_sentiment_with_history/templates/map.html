@@ -20,10 +20,10 @@
         border: 1px solid #999;
       }
       #word_count_chart {
-          position: fixed;
+          position: absolute;
           z-index: 2;
-          top: 7px;
-          width: 100%;
+          bottom: 0;
+          width: 95%;
           height: 120px;
       }
     </style>
@@ -40,7 +40,7 @@
       var map, heatmap;
       var markerFlag = null;
       var markers = [];
-      var socket;
+      var socket1;
 
       function initialize() {
         var mapOptions = {
@@ -95,17 +95,17 @@
 
       function handleRealtime(keyword)
       {
-        if (typeof socket != 'undefined')
-          socket.disconnect();
+        if (typeof socket1 != 'undefined')
+          socket1.disconnect();
         hideMarkers();
         markers = [];
         var newTweetPoints = new google.maps.MVCArray();
         heatmap.setData(newTweetPoints);
         var addr = 'http://' + document.domain + ':' + location.port;
         // alert(addr);
-        socket = io.connect(addr, {'force new connection':true });
-        socket.emit('keyword', keyword);
-        socket.on('data_transfer', function(data) {
+        socket1 = io.connect(addr, {'force new connection':true });
+        socket1.emit('keyword', keyword);
+        socket1.on('data_transfer', function(data) {
           // alert(data);
           // console.log(data);
           parsedData = $.parseJSON(data);
@@ -119,9 +119,9 @@
           var iw = new google.maps.InfoWindow({content: parsedData.text});
           google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
         });
-        socket.on('die', function(exception) {
+        socket1.on('die1', function(exception) {
           alert(exception);
-          socket.disconnect();
+          socket1.disconnect();
         });
       }
 
@@ -186,58 +186,43 @@
     <div id="word_count_chart" class="epoch"></div>
     <div id="map-canvas"></div>
     <script type="text/javascript">
-    var RealTimeData = function(layers) {
-        this.layers = layers;
-        this.timestamp = ((new Date()).getTime() / 1000)|0;
-    };
+      var socket2;
+      var chart;
+      var timestamp = ((new Date()).getTime() / 1000)|0;
 
-    RealTimeData.prototype.rand = function() {
-        return parseInt(Math.random() * 100) + 50;
-    };
+      function getWordCount()
+      {
+        if (typeof socket2 != 'undefined')
+          socket2.disconnect();
+        var addr = 'http://' + document.domain + ':' + location.port;
+        // alert(addr);
+        socket2 = io.connect(addr, {'force new connection':true });
+        socket2.emit('wordcount_c2s', '');
+        socket2.on('wordcount_s2c', function(count) {
+          count = parseInt(count);
+          // alert(count);
+          // console.log(timestamp);
+          // console.log(count);
+          timestamp++;
+          var x = [{time:timestamp, y:count}];
+          chart.push(x);
+          // console.log(x);
+        });
+        socket2.on('die2', function(exception) {
+          alert(exception);
+          socket2.disconnect();
+        });
+      }
 
-    RealTimeData.prototype.history = function(entries) {
-        if (typeof(entries) != 'number' || !entries) {
-            entries = 1;
-        }
-
-        var history = [];
-        for (var k = 0; k < this.layers; k++) {
-            history.push({ values: [] });
-        }
-
-        for (var j = 0; j < this.layers; j++) {
-            history[j].values.push({time: this.timestamp, y: 0});
-        }
-        this.timestamp++;
-
-        return history;
-    };
-
-    RealTimeData.prototype.next = function() {
-        var entry = [];
-        for (var i = 0; i < this.layers; i++) {
-            entry.push({ time: this.timestamp, y: this.rand() });
-        }
-        this.timestamp++;
-        return entry;
-    }
-
-    window.RealTimeData = RealTimeData;
-
-    $(function(){
-
-        var data = new RealTimeData(1);
-
-        var chart = $('#word_count_chart')
-           .epoch({
+      $(function(){
+          chart = $('#word_count_chart')
+              .epoch({
                 type: 'time.bar',
-                data: data.history(0),
+                data: [{values: [{time: timestamp, y: 0}]}],
                 axes: ['left', 'bottom', 'right']
-            });
-            // pull data not push data model?
-            window.setInterval(function() { var x= data.next(); chart.push(x); }, 1000);
-    });
-
-</script>
+              });
+          getWordCount();
+      });
+    </script>
   </body>
 </html>
