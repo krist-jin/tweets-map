@@ -45,6 +45,20 @@
       var tweetPoints = null;
       var SOCKET_ADDR = 'http://' + document.domain + ':' + location.port;
 
+      function processOneTweet(tweet_parsed_json) {
+        // add latlon to heatmap
+        var newLatLon = new google.maps.LatLng(tweet_parsed_json.lat, tweet_parsed_json.lon);
+        tweetPoints.push(newLatLon);
+        // process markers
+        var marker = new google.maps.Marker({
+          position: newLatLon,
+          map: markerFlag
+        });
+        markers.push(marker);
+        var iw = new google.maps.InfoWindow({content: tweet_parsed_json.text});
+        google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+      }
+
       function initialize() {
         var mapOptions = {
           zoom: 3,
@@ -56,22 +70,9 @@
         markers = [];
         // fetch data and create inital heat map
         tweetPoints = new google.maps.MVCArray();
-        // heatmap = new google.maps.visualization.HeatmapLayer({
-        //     map: map,
-        //     data: tweetPoints,
-        //     radius: 40
-        //   });
         $.getJSON("/api/history/keyword/", function(data){
           $.each(data,function(i,tweet) {
-            newLatLon = new google.maps.LatLng(tweet.lat, tweet.lon);
-            tweetPoints.push(newLatLon);
-            var marker = new google.maps.Marker({
-              position: newLatLon,
-              map: markerFlag
-            });
-            markers.push(marker);
-            var iw = new google.maps.InfoWindow({content: tweet.text});
-            google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+            processOneTweet(tweet);
           });
           heatmap = new google.maps.visualization.HeatmapLayer({
             map: map,
@@ -85,8 +86,8 @@
       {
         var mode = $("#mode option:selected").val();
         var keyword = $("#keyword").val()
-        markers = [];
         hideMarkers();
+        markers = [];
         if (socket1 != null)
         {
           socket1.disconnect();
@@ -105,15 +106,7 @@
         tweetPoints = new google.maps.MVCArray();
         $.getJSON("/api/history/keyword/"+keyword, function(data){
           $.each(data,function(i,tweet) {
-            newLatLon = new google.maps.LatLng(tweet.lat, tweet.lon);
-            tweetPoints.push(newLatLon);
-            var marker = new google.maps.Marker({
-              position: newLatLon,
-              map: markerFlag
-            });
-            markers.push(marker);
-            var iw = new google.maps.InfoWindow({content: tweet.text});
-            google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+            processOneTweet(tweet);
           });
           heatmap.setData(tweetPoints);
         });
@@ -131,16 +124,8 @@
         socket1.on('data_transfer', function(data) {
           // alert(data);
           // console.log(data);
-          parsedData = $.parseJSON(data);
-          newLatLon = new google.maps.LatLng(parsedData.lat, parsedData.lon);
-          tweetPoints.push(newLatLon);
-          var marker = new google.maps.Marker({
-            position: newLatLon,
-            map: markerFlag
-          });
-          markers.push(marker);
-          var iw = new google.maps.InfoWindow({content: parsedData.text});
-          google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+          parsedTweet = $.parseJSON(data);
+          processOneTweet(parsedTweet);
         });
         socket1.on('die1', function(exception) {
           alert(exception);
@@ -215,16 +200,8 @@
           socket1.on('data_transfer', function(data) {
             // alert(data);
             // console.log(data);
-            parsedData = $.parseJSON(data);
-            newLatLon = new google.maps.LatLng(parsedData.lat, parsedData.lon);
-            tweetPoints.push(newLatLon);
-            var marker = new google.maps.Marker({
-              position: newLatLon,
-              map: markerFlag
-            });
-            markers.push(marker);
-            var iw = new google.maps.InfoWindow({content: parsedData.text});
-            google.maps.event.addListener(marker, "click", function (e) { iw.open(map, this); });
+            parsedTweet = $.parseJSON(data);
+            processOneTweet(parsedTweet);
           });
         }
       }
