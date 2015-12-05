@@ -2,10 +2,15 @@
 #-*-coding:utf-8 -*-
 
 import sys
+from os import path
+sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )  # add src to path
+
+from utils.priority_dict import PriorityDict
 import threading, logging, time
 import pickle
 import uniout
 import redis
+import re
 
 from kafka.client import KafkaClient
 from kafka.consumer import SimpleConsumer
@@ -32,9 +37,11 @@ def main():
     topic = "twitter_raw"
     kvs = KafkaUtils.createStream(ssc, zkQuorum, "spark-streaming-consumer", {topic: 1})
     lines = kvs.map(lambda x: pickle.loads(x[1].decode('utf-8'))['text'])  # fetch the text
-    count = lines.map(lambda line: len(line.split())).reduce(add)  # split into words and count
-    count.foreachRDD(publishToRedis)  # publish to redis
-    count.pprint()
+    words = lines.flatMap(lambda line: re.compile('\w+').findall(line))  # only extract words
+    pairs = words.map(lambda word: (word, 1))
+    wordStats = pairs.reduceByKey(lambda x, y: x + y)
+    # count.foreachRDD(publishToRedis)  # publish to redis
+    wordStats.pprint()
 
     ssc.start()
     ssc.awaitTermination()
