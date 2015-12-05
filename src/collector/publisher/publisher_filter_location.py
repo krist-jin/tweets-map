@@ -68,7 +68,7 @@ class Listener(tweepy.StreamListener):
                 # "favourites_count": raw_tweet.user.favourites_count,
                 "created_at": raw_tweet.user.created_at,  # in GMT
             },
-            "lang:": raw_tweet.lang,
+            "lang": raw_tweet.lang,
             "created_at": raw_tweet.created_at,  # in GMT
             "place": {
                 "country_code": raw_tweet.place.country_code,

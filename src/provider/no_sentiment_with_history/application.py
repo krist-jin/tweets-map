@@ -96,6 +96,22 @@ def getWordCount(msg):
             print e
             return
 
+@socketio.on('wordstat_c2s')
+def getWordStat(msg):
+    pubsub = redis.pubsub()
+    pubsub.subscribe('word_stat')
+    message = pubsub.listen()
+    while True:
+        try:
+            count = message.next().get('data')
+            emit('wordstat_s2c', count)
+            # print count
+        except Exception, e:
+            emit('die2', e, broadcast=True)
+            pubsub.unsubscribe('word_stat')
+            print e
+            return
+
 def data_filter(tweet):
     raw_coordinates = tweet.get('place').get('coordinates')
     if len(raw_coordinates)==1:
