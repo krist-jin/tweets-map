@@ -41,16 +41,16 @@ def wordFilter(word_and_tag):
     word, tag = word_and_tag
     return (len(word)>=MINIMUM_WORD_LENGTH) and (tag==PERMIT_TAG) and (word not in BLACK_LIST_WORDS)
 
-def wordStat(raw_tweet):
+def getWordStats(raw_tweet):
     eng_data = raw_tweet.filter(lambda x: x['lang']=='en')  # keep only english
     eng_lines = eng_data.map(lambda x: x['text'].decode('utf-8'))  # fetch the text
     words = eng_lines.flatMap(lambda line: re.compile('\w+').findall(line))  # only extract words (naive tokenizer)
     tagged = words.map(lambda word: nltk.tag._pos_tag([word.lower()], 'universal', tagger)[0])
     # tagged = eng_lines.flatMap(lambda line: nltk.word_tokenize(line))  # tokenize with nltk (has encoding error)
     nouns = tagged.filter(wordFilter).map(lambda pair: pair[0])
-    pairs = nouns.map(lambda noun: (noun, 1))
-    wordStats = pairs.reduceByKey(lambda x, y: x + y)
-    wordStats.foreachRDD(publishToRedis)  # publish to redis
+    wordStats = nouns.map(lambda noun: (noun, 1)).reduceByKey(lambda x, y: x + y)
+    # wordStats = nouns.countByValue()
+    # wordStats.foreachRDD(publishToRedis)  # publish to redis
     wordStats.pprint()
 
 def printTweetWithSomeWord(raw_tweet, word):
@@ -67,7 +67,7 @@ def main():
     kvs = KafkaUtils.createStream(ssc, zkQuorum, "spark-streaming-consumer", {topic: 1})
     raw_tweet = kvs.map(lambda bytes_data: pickle.loads(bytes_data[1].decode('utf-8')))  # depickle
 
-    wordStat(raw_tweet)
+    getWordStats(raw_tweet)
     # printTweetWithSomeWord(raw_tweet, "amp")
 
     ssc.start()
