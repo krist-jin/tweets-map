@@ -11,6 +11,7 @@ import pickle
 import uniout
 import redis
 import re
+from operator import add, sub
 
 from kafka.client import KafkaClient
 from kafka.consumer import SimpleConsumer
@@ -48,9 +49,10 @@ def getWordStats(raw_tweet):
     tagged = words.map(lambda word: nltk.tag._pos_tag([word.lower()], 'universal', tagger)[0])
     # tagged = eng_lines.flatMap(lambda line: nltk.word_tokenize(line))  # tokenize with nltk (has encoding error)
     nouns = tagged.filter(wordFilter).map(lambda pair: pair[0])
-    wordStats = nouns.map(lambda noun: (noun, 1)).reduceByKey(lambda x, y: x + y)
-    # wordStats = nouns.countByValue()
-    # wordStats.foreachRDD(publishToRedis)  # publish to redis
+    wordStats = nouns.map(lambda noun: (noun, 1)).reduceByKey(add)
+    # wordStats = nouns.countByValue()  # does not work because of bugs in PySpark?
+    # wordStats = nouns.map(lambda noun: (noun, 1)).reduceByKeyAndWindow(add, sub, WINDOW_WIDTH, UPDATE_INTERVAL)  # does not work because it needs checkpoint, but checkpoint hates redis.publish
+    wordStats.foreachRDD(publishToRedis)  # publish to redis
     wordStats.pprint()
 
 def printTweetWithSomeWord(raw_tweet, word):
@@ -62,6 +64,7 @@ def printTweetWithSomeWord(raw_tweet, word):
 
 def main():
     ssc = StreamingContext(SparkContext(appName="PythonStreamingKafkaWordCount"), 1)
+    # ssc.checkpoint('/tmp/sparkstreamingcheckpoint')  # it hates redis.publish
     zkQuorum = "localhost:2181"
     topic = "twitter_raw"
     kvs = KafkaUtils.createStream(ssc, zkQuorum, "spark-streaming-consumer", {topic: 1})
