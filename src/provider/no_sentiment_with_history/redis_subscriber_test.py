@@ -21,6 +21,7 @@ while True:
     except TypeError, e:
         continue
     this_counter = Counter(dict(stats))
+    # print this_counter.most_common(10)
     current_time = int(time.time())
     active_counters.append((this_counter, current_time))
     result += this_counter  # add current counter to the result
