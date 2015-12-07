@@ -51,6 +51,7 @@ def getWordStats(raw_tweet):
     nouns = tagged.filter(wordFilter).map(lambda pair: pair[0])
     wordStats = nouns.map(lambda noun: (noun, 1)).reduceByKey(add)
     # wordStats = nouns.countByValue()  # does not work because of bugs in PySpark?
+    # wordStats = nouns.countByValueAndWindow(60, 5)  # does not work because of bugs in PySpark?
     # wordStats = nouns.map(lambda noun: (noun, 1)).reduceByKeyAndWindow(add, sub, WINDOW_WIDTH, UPDATE_INTERVAL)  # does not work because it needs checkpoint, but checkpoint hates redis.publish
     wordStats.foreachRDD(publishToRedis)  # publish to redis
     wordStats.pprint()
