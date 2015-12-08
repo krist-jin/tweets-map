@@ -102,4 +102,4 @@ if __name__ == '__main__':
                 print e
                 continue
         print "run out of keys! Pause for 3 mins to cool down..."
-        time.sleep(1800)
+        time.sleep(180)

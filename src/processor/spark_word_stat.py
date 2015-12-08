@@ -12,6 +12,7 @@ import uniout
 import redis
 import re
 from operator import add, sub
+from collections import Counter
 
 from kafka.client import KafkaClient
 from kafka.consumer import SimpleConsumer
@@ -22,6 +23,8 @@ from pyspark.streaming.kafka import KafkaUtils
 
 import nltk
 from nltk.tag.perceptron import PerceptronTagger
+
+import pycountry
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
@@ -56,11 +59,45 @@ def getWordStats(raw_tweet):
     wordStats.foreachRDD(publishToRedis)  # publish to redis
     wordStats.pprint()
 
+def getCountryStats(raw_tweet):
+    def getCountryName(x):
+        # return (x['place']['country_code'], 1)
+        try:
+            country_code = x['place']['country_code']
+            return (pycountry.countries.get(alpha2=country_code).name, 1)
+        except Exception, e:
+            return ("unknown", 1)
+
+    countryStats = raw_tweet.filter(lambda x: x['lang']=='en')  \
+                            .map(lambda x: getCountryName(x))  \
+                            .reduceByKey(add)
+    countryStats.foreachRDD(publishToRedis)  # publish to redis
+    countryStats.pprint()
+
+def mapFunction(raw_tweet):  # from raw_tweet to counter
+    country_code = raw_tweet['place']['country_code']
+    words = re.compile('\w+').findall(raw_tweet['text'].decode('utf-8'))
+    lower_words = [word.lower() for word in words]
+    word_tag_pairs = nltk.tag._pos_tag(lower_words, 'universal', tagger)
+    filtered_words = [word_tag[0] for word_tag in word_tag_pairs if wordFilter(word_tag)]
+    this_counter = Counter(filtered_words)
+    return (country_code, this_counter)
+
+def getWordStatsByCountry(raw_tweet, countries):
+    countries_counter = (
+        raw_tweet.filter(lambda x: x['lang']=='en' and x['place']['country_code'] in countries)  # keep only English and selected countries
+                 .map(mapFunction)  # get counter for each country
+                 .reduceByKey(add)  # combine counters with same key
+    )
+    countries_counter.foreachRDD(publishToRedis)  # publish to redis
+    countries_counter.pprint()
+
+
 def printTweetWithSomeWord(raw_tweet, word):
     eng_data = raw_tweet.filter(lambda x: x['lang']=='en')  # keep only english
-    eng_lines = eng_data.map(lambda x: x['text'].decode('utf-8'))  # fetch the text
-    words_lists = eng_lines.map(lambda line: re.compile('\w+').findall(line))  # only extract words (naive tokenizer)
-    tweetsContainSomeWord = words_lists.filter(lambda x: word in x)
+    eng_lines = eng_data.map(lambda x: (x['id'], x['text'].decode('utf-8')))  # fetch the text
+    words_lists = eng_lines.map(lambda line: ("https://twitter.com/statuses/"+str(line[0]), re.compile('\w+').findall(line[1])))  # only extract words (naive tokenizer)
+    tweetsContainSomeWord = words_lists.filter(lambda x: word in x[1])
     tweetsContainSomeWord.pprint()
 
 def main():
@@ -71,8 +108,10 @@ def main():
     kvs = KafkaUtils.createStream(ssc, zkQuorum, "spark-streaming-consumer", {topic: 1})
     raw_tweet = kvs.map(lambda bytes_data: pickle.loads(bytes_data[1].decode('utf-8')))  # depickle
 
-    getWordStats(raw_tweet)
-    # printTweetWithSomeWord(raw_tweet, "amp")
+    # getWordStats(raw_tweet)
+    # printTweetWithSomeWord(raw_tweet, "job")
+    # getCountryStats(raw_tweet)
+    getWordStatsByCountry(raw_tweet, set(['US', 'GB']))
 
     ssc.start()
     ssc.awaitTermination()
