@@ -81,13 +81,14 @@ def mapFunction(raw_tweet):  # from raw_tweet to counter
     word_tag_pairs = nltk.tag._pos_tag(lower_words, 'universal', tagger)
     filtered_words = [word_tag[0] for word_tag in word_tag_pairs if wordFilter(word_tag)]
     this_counter = Counter(filtered_words)
-    return (country_code, this_counter)
+    total_word_count = len(words)
+    return (country_code, (total_word_count, this_counter))
 
 def getWordStatsByCountry(raw_tweet, countries):
     countries_counter = (
         raw_tweet.filter(lambda x: x['lang']=='en' and x['place']['country_code'] in countries)  # keep only English and selected countries
                  .map(mapFunction)  # get counter for each country
-                 .reduceByKey(add)  # combine counters with same key
+                 .reduceByKey(lambda x,y: (x[0]+y[0], x[1]+y[1]))  # combine counters with same key
     )
     countries_counter.foreachRDD(publishToRedis)  # publish to redis
     countries_counter.pprint()

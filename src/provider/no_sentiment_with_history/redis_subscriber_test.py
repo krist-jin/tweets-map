@@ -23,11 +23,11 @@ while True:
         stats = pickle.loads(pickled_stats)
     except TypeError, e:
         continue
-    for (country_code, this_counter) in stats:
+    for (country_code, (this_total_word_count, this_counter)) in stats:
         current_time = int(time.time())
         active_counters[country_code].append((this_counter, current_time))
         result[country_code] += this_counter  # add current counter to the result
         while current_time - active_counters[country_code][0][1] > TIME_WINDOW:  # if old counter expire
             result[country_code] -= active_counters[country_code].popleft()[0]  # minus old counter
-        print country_code, result[country_code].most_common(20)
+        print country_code, this_total_word_count, result[country_code].most_common(20)
     print
