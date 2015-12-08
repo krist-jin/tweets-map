@@ -81,7 +81,7 @@ def handle_realtime_connect(keyword):
 ### api used to get wordcount from spark streaming ###
 # @application.route('/wordcount', methods=['GET']) # TODO: change to socket.io and bind d3
 @socketio.on('wordcount_c2s')
-def getWordCount(msg):
+def getWordCountAndStats(msg):
     pubsub = redis.pubsub()
     pubsub.subscribe('word_count')
     message = pubsub.listen()
