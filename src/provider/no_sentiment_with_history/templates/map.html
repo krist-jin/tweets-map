@@ -240,17 +240,25 @@
         }
         // alert(SOCKET_ADDR);
         socket2 = io.connect(SOCKET_ADDR, {'force new connection':true });
-        socket2.emit('wordcount_c2s', '');
-        socket2.on('wordcount_s2c', function(count) {
-          count = parseInt(count);
-          // alert(count);
-          // console.log(timestamp);
-          // console.log(count);
+        socket2.emit('word_count_and_stats_c2s', '');
+        socket2.on('word_count_and_stats_s2c', function(data) {  // {"US": [123, {"a": 1, "h": 1, "p": 1, "s": 1, "u": 1, "t": 1, "w": 1}]}
+          // console.log(typeof data);
+          // console.log(data)
           timestamp++;
-          var x = [{time:timestamp, y:count}];
-          chart.push(x);
+          var entry = [];
+          data = $.parseJSON(data);
+          for(var country_code in data)  // TODO: some data will be empty
+          {
+            var total_word_count = data[country_code][0];
+            var word_stats = data[country_code][1];
+            entry.push({time:timestamp, y:total_word_count});
+          }
+          // alert(data);
+          // console.log(timestamp);
+          chart.push(entry);
           // console.log(x);
         });
+
         socket2.on('die2', function(exception) {
           alert(exception);
           socket2.disconnect();
@@ -262,7 +270,7 @@
           chart = $('#word_count_chart')
               .epoch({
                 type: 'time.bar',
-                data: [{values: [{time: timestamp, y: 0}]}],
+                data: [{values: [{time: timestamp, y: 0}]}, {values: [{time: timestamp, y: 0}]}],  // TODO: this should not be hard-coded
                 axes: ['left', 'bottom', 'right']
               });
           getWordCount();

@@ -39,7 +39,7 @@ def publishToRedis(wordStats):
     stats = wordStats.collect()
     if stats:
         pickled_stats = pickle.dumps(stats)
-        redis.publish("word_stats", pickled_stats)
+        redis.publish("word_count_and_stats", pickled_stats)
 
 def wordFilter(word_and_tag):
     word, tag = word_and_tag

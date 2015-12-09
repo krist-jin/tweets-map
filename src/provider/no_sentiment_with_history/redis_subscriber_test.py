@@ -5,7 +5,7 @@ from collections import Counter, deque, defaultdict
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 pubsub = redis.pubsub()
-pubsub.subscribe('word_stats')
+pubsub.subscribe('word_count_and_stats')
 message = pubsub.listen()
 
 # result = Counter()
