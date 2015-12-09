@@ -1,0 +1,1 @@
+COUNTRY_SET = set(['US', 'GB'])

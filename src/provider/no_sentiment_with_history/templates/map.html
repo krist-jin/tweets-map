@@ -230,6 +230,45 @@
       var socket2 = null;
       var chart;
       var timestamp = ((new Date()).getTime() / 1000)|0;
+      var config_table = {};
+
+      $(function(){
+        // $.when(getInitConfig()).then(startBarChart());
+        getInitConfig();
+      });
+
+      function getInitConfig()
+      {
+        $.getJSON("/config", function(data){
+          $.each(data,function(key,value) {
+            config_table[key] = value;
+            if (key=="selected_countries")  // not the optimal way to do func2 after func1. investigate promise.done 
+              startBarChart();
+          });
+        });
+      }
+
+      function startBarChart()
+      {
+        // console.log(config_table);
+        chart = $('#word_count_chart')
+          .epoch({
+            type: 'time.bar',
+            data: getInitBarData(),
+            axes: ['left', 'bottom', 'right']
+          });
+        getWordCount();
+      }
+
+      function getInitBarData()
+      {
+        var selected_countries = config_table["selected_countries"];
+        var initBarData = [];
+        for (var i = 0; i < selected_countries.length; i++) {
+          initBarData.push({values: [{time: timestamp, y: 0}]});
+        };
+        return initBarData;
+      }
 
       function getWordCount()
       {
@@ -247,16 +286,22 @@
           timestamp++;
           var entry = [];
           data = $.parseJSON(data);
-          for(var country_code in data)  // TODO: some data will be empty
+          var selected_countries = config_table["selected_countries"];
+          for (var i = 0; i < selected_countries.length; i++)
           {
-            var total_word_count = data[country_code][0];
-            var word_stats = data[country_code][1];
-            entry.push({time:timestamp, y:total_word_count});
+            var country_code = selected_countries[i];
+            if(country_code in data)
+            {
+              var total_word_count = data[country_code][0];
+              // var word_stats = data[country_code][1];
+              entry.push({time:timestamp, y:total_word_count});
+            }
+            else
+            {
+              entry.push({time:timestamp, y:0});
+            }
           }
-          // alert(data);
-          // console.log(timestamp);
           chart.push(entry);
-          // console.log(x);
         });
 
         socket2.on('die2', function(exception) {
@@ -266,15 +311,6 @@
         });
       }
 
-      $(function(){
-          chart = $('#word_count_chart')
-              .epoch({
-                type: 'time.bar',
-                data: [{values: [{time: timestamp, y: 0}]}, {values: [{time: timestamp, y: 0}]}],  // TODO: this should not be hard-coded
-                axes: ['left', 'bottom', 'right']
-              });
-          getWordCount();
-      });
     </script>
   </body>
 </html>

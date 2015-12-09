@@ -1,5 +1,9 @@
 #!/usr/bin/python
 #-*-coding:utf-8 -*-
+import sys
+from os import path
+sys.path.append( path.dirname( path.dirname( path.dirname( path.abspath(__file__) ) ) ) )  # add src to path
+import config.processor_config as config
 
 from flask import Flask, render_template, Response
 from flask.ext.socketio import SocketIO, emit
@@ -50,6 +54,11 @@ def handle_history(keyword=""):
         tmpDict = {"lon":data["lon"], "lat":data["lat"], "text":data["text"]}
         twData.append(tmpDict)
     return json.dumps(twData)
+
+@application.route('/config', methods=['GET'])
+def get_init_config():
+    country_set = config.COUNTRY_SET
+    return json.dumps({"selected_countries": list(country_set)})
 
 @socketio.on('keyword')
 def handle_realtime_connect(keyword):

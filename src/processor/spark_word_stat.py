@@ -4,6 +4,7 @@
 import sys
 from os import path
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )  # add src to path
+import config.processor_config as config
 
 from utils.priority_dict import PriorityDict
 import threading, logging, time
@@ -112,7 +113,7 @@ def main():
     # getWordStats(raw_tweet)
     # printTweetWithSomeWord(raw_tweet, "job")
     # getCountryStats(raw_tweet)
-    getWordStatsByCountry(raw_tweet, set(['US', 'GB']))
+    getWordStatsByCountry(raw_tweet, config.COUNTRY_SET)
 
     ssc.start()
     ssc.awaitTermination()
