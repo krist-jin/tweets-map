@@ -3,32 +3,6 @@
 	/* Events from UI */
 
 	var SOCKET_ADDR = 'http://' + document.domain + ':' + location.port;
-	var picker = document.getElementById('dataCenterPicker');
-	var dataCenter = picker.options[picker.selectedIndex].value;
-
-	picker.addEventListener('change', function(e){
-		dataCenter = picker.options[picker.selectedIndex].value;
-		// console.log(dataCenter);
-	}, false);
-
-	var isRunning = true;
-	var button = document.getElementById('toggle');
-
-	// button.addEventListener('click', function(e){
-	// 	if(isRunning) {
-	// 		pubnub.unsubscribe({
-	// 			channel: channel
-	// 		});
-	// 		button.value = 'Stream again';
-	// 		isRunning = false;
-	// 	} else {
-	// 		getData();
-	// 		button.value = 'Stop me!';
-	// 		isRunning = true;
-	// 	}
-		
-	// }, false);
-
 
 
 	/* D3 Bubble Chart */
@@ -46,7 +20,6 @@
 		.padding(3);
 
 	function drawBubbles(m) {
-		// if(m.region !== dataCenter) return;
 
 		// generate data with calculated layout values
 		var nodes = bubble.nodes(processData(m))
@@ -106,29 +79,6 @@
 
 
 
-	
-	/* PubNub */
-
-	// var channel = 'rts-xNjiKP4Bg4jgElhhn9v9';
-
-	// var pubnub = PUBNUB.init({
-	// 	subscribe_key: 'e19f2bb0-623a-11df-98a1-fbd39d75aa3f'
-	// });
-
-	// function getData() {
-	// 	var i = 0;
-	// 	pubnub.subscribe({
-	// 		channel: channel,
-	// 		callback: function(m) {
-	// 			// i++; 
-	// 			// if(i === 1 || i%10 === 0) {
-	// 			// 	drawBubbles(m);
-	// 			// }	
-	// 			drawBubbles(m);		
-	// 		}
-	// 	});
-	// }
-
 	function getData() {
 		var socket2 = io.connect(SOCKET_ADDR, {'force new connection':true });
 		socket2.emit('word_count_and_stats_c2s', '');
@@ -136,19 +86,6 @@
 			drawBubbles(data);
 		});
 	}
-
-	// function processData(data) {
-	// 	if(!data) return;
-
-	// 	var obj = data.countries_msg_vol;
-
-	// 	var newDataSet = [];
-
-	// 	for(var prop in obj) {
-	// 		newDataSet.push({name: prop, className: prop.toLowerCase().replace(/ /g,''), size: obj[prop]});
-	// 	}
-	// 	return {children: newDataSet};
-	// }
 
 	function processData(data) {
 		if(!data) return;
