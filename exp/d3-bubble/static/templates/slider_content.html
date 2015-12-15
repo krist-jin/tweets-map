@@ -39,7 +39,7 @@
                 var nodes = bubble.nodes(processData(m))
                     .filter(function(d) { return !d.children; }); // filter out the outer bubble
 
-                console.log(nodes);
+                // console.log(nodes);
 
                 // assign new data to existing DOM 
                 var vis = svg.selectAll('circle')
@@ -93,7 +93,7 @@
 
 
 
-            function getData() {
+            function startBubbles() {
                 var socket2 = io.connect(SOCKET_ADDR, {'force new connection':true });
                 socket2.emit('word_count_and_stats_c2s', '');
                 socket2.on("word_count_and_stats_s2c", function(data) {
@@ -104,8 +104,9 @@
             function processData(data) {
                 if(!data) return;
                 data = $.parseJSON(data);
-                country_list = Object.keys(data);
-                data = data[country_list[0]][1];  // select the first country as exp
+                console.log(data);
+                // country_list = Object.keys(data);
+                data = data['US'][1];  // select the first country as exp
                 var newDataSet = [];
                 for (var i = 0; i < data.length; i++) {
                     var pair = data[i];
@@ -115,7 +116,7 @@
                 return {children: newDataSet};
             }
 
-            getData();
+            startBubbles();
         });
 
     </script>

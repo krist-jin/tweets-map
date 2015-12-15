@@ -33,6 +33,12 @@ def index():
     # return render_template('independent.html')  # without slider
     return render_template('wrapper.html')  # with slider
 
+@application.route('/config', methods=['GET'])
+def get_init_config():
+    # country_set = config.COUNTRY_SET
+    country_set = set(['US', 'GB'])
+    return json.dumps({"selected_countries": list(country_set)})
+
 @socketio.on('keyword')
 def handle_realtime_connect(keyword):
     print('received keyword: ' + keyword)
