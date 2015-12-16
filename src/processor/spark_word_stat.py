@@ -103,7 +103,7 @@ def printTweetWithSomeWord(raw_tweet, word):
     tweetsContainSomeWord.pprint()
 
 def main():
-    ssc = StreamingContext(SparkContext(appName="PythonStreamingKafkaWordCount"), 1)
+    ssc = StreamingContext(SparkContext(appName="PythonStreamingKafkaWordCount"), 5)
     # ssc.checkpoint('/tmp/sparkstreamingcheckpoint')  # it hates redis.publish
     zkQuorum = "localhost:2181"
     topic = "twitter_raw"
