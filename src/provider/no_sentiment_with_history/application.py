@@ -22,8 +22,7 @@ from pymongo import MongoClient
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
-STATIC_FOLDER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), './static')
-application = Flask(__name__, static_folder=STATIC_FOLDER_DIR)
+application = Flask(__name__, static_folder='./static', template_folder="./static/templates")
 application.debug = True
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 socketio = SocketIO(application)
